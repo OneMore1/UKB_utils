@@ -8,7 +8,7 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# check zstd + base64 installed（用于解压内嵌脚本）
+# check zstd + base64 installed
 if ! command -v zstd &> /dev/null; then
     echo "zstd could not be found."
     exit 1
@@ -67,7 +67,7 @@ o3E=
 EOF
 fi
 
-process_rfMRI_zip() {
+process_rfMRI() {
     local sub_file_idx="$1"
     local BASE_PATH="."
 
@@ -127,5 +127,59 @@ process_rfMRI_zip() {
       "${BASE_PATH}/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 }
 
+process_surf() {
+    local sub_file_idx="$1"
+    local BASE_PATH="."
+
+    local FRAME_START=200
+    local FRAME_LENGTH=40
+
+    # find file path in DNAnexus
+    local dx_rel_path=$(
+      dx find data --name "${sub_file_idx}.zip" --json \
+      | jq -r '.[0] | .describe.folder + "/" + .describe.name' 2>/dev/null || true
+    )
+
+    if [[ -z "$dx_rel_path" ]]; then
+        echo "File ${sub_file_idx}.zip not found in DNAnexus."
+        return 1
+    fi
+
+    local f_path="/mnt/project/${dx_rel_path}"
+
+    if [[ ! -f "$f_path" ]]; then
+        echo "File path $f_path does not exist."
+        return 1
+    fi
+
+    # unzip and prepare output directory
+    mkdir -p "${BASE_PATH}/${sub_file_idx}"
+    python3 -m zipfile -e "$f_path" "${BASE_PATH}/${sub_file_idx}"
+
+    export FSLOUTPUTTYPE=NIFTI
+
+    # convert to npy.zst using the generated nifti_process.py
+    python3 "$SCRIPT_NAME" \
+      -t 2D \
+      -i "${BASE_PATH}/${sub_file_idx}/surf_fMRI/CIFTIs/bb.rfMRI.MNI.MSMAll.dtseries.nii" \
+      -o "${BASE_PATH}/${sub_file_idx}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
+
+    # upload to DNAnexus
+    dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/surf_fMRI/${sub_file_idx}"
+    dx upload \
+      --wait \
+      --no-progress \
+      --path "${DX_PROJECT_CONTEXT_ID}:/datasets/surf_fMRI/${sub_file_idx}/" \
+      "${BASE_PATH}/${sub_file_idx}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
+}
+
 sub_file_idx="1044210_20227_2_0"
-process_rfMRI_zip "$sub_file_idx"
+
+if [[ "${sub_file_idx##*_}" == "20227" ]]; then
+    process_rfMRI "$sub_file_idx"
+elif [[ "${sub_file_idx##*_}" == "32136" ]]; then
+    process_surf "$sub_file_idx"
+else
+    echo "Unknown sub_file_idx type: $sub_file_idx"
+    exit 1
+fi
