@@ -67,6 +67,32 @@ rcPb69UhALKG71b8l44vEgBzUdnHkvQT/01mBS2kvHIgQN4jUCSnhASPxyDQw2OiqQUmqNPHjXk=
 EOF
 fi
 
+prepare_subject_data() {
+    local sub_file_idx="$1"
+    local base_path="$2"
+
+    # Locate, validate, and unpack the DNAnexus zip for the subject.
+    local dx_rel_path=$(
+      dx find data --name "${sub_file_idx}.zip" --json \
+      | jq -r '.[0] | .describe.folder + "/" + .describe.name' 2>/dev/null || true
+    )
+
+    if [[ -z "$dx_rel_path" ]]; then
+        echo "File ${sub_file_idx}.zip not found in DNAnexus."
+        return 1
+    fi
+
+    local f_path="/mnt/project/${dx_rel_path}"
+
+    if [[ ! -f "$f_path" ]]; then
+        echo "File path $f_path does not exist."
+        return 1
+    fi
+
+    mkdir -p "${base_path}/${sub_file_idx}"
+    python3 -m zipfile -e "$f_path" "${base_path}/${sub_file_idx}/"
+}
+
 process_rfMRI() {
     local sub_file_idx="$1"
     local BASE_PATH="."
@@ -74,49 +100,31 @@ process_rfMRI() {
     local FRAME_START=200
     local FRAME_LENGTH=40
 
-    # find file path in DNAnexus
-    local dx_rel_path=$(
-      dx find data --name "${sub_file_idx}.zip" --json \
-      | jq -r '.[0] | .describe.folder + "/" + .describe.name' 2>/dev/null || true
-    )
+    prepare_subject_data "$sub_file_idx" "$BASE_PATH" || return 1
 
-    if [[ -z "$dx_rel_path" ]]; then
-        echo "File ${sub_file_idx}.zip not found in DNAnexus."
-        return 1
-    fi
-
-    local f_path="/mnt/project/${dx_rel_path}"
-
-    if [[ ! -f "$f_path" ]]; then
-        echo "File path $f_path does not exist."
-        return 1
-    fi
-
-    # unzip and prepare output directory
-    mkdir -p "${BASE_PATH}/${sub_file_idx}"
-    python3 -m zipfile -e "$f_path" "${BASE_PATH}/${sub_file_idx}"
+    local SUBJECT_DIR="${BASE_PATH}/${sub_file_idx}"
 
     export FSLOUTPUTTYPE=NIFTI
 
     # cut frames
     fslroi \
-      "${BASE_PATH}/${sub_file_idx}/fMRI/rfMRI.nii.gz" \
-      "${BASE_PATH}/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
+      "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
+      "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
       0 -1 0 -1 0 -1 "$FRAME_START" "$FRAME_LENGTH"
 
     # warp to MNI space
     applywarp \
-      -i "${BASE_PATH}/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
-      -r "${BASE_PATH}/${sub_file_idx}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" \
-      -w "${BASE_PATH}/${sub_file_idx}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" \
-      -o "${BASE_PATH}/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
+      -i "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
+      -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" \
+      -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" \
+      -o "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
       --interp=spline
 
     # convert to npy.zst using the generated nifti_process.py
     python3 "$SCRIPT_NAME" \
       -t 4D \
-      -i "${BASE_PATH}/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
-      -o "${BASE_PATH}/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
+      -i "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
+      -o "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 
     # upload to DNAnexus
     dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI/${sub_file_idx}"
@@ -124,45 +132,22 @@ process_rfMRI() {
       --wait \
       --no-progress \
       --path "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI/${sub_file_idx}/" \
-      "${BASE_PATH}/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
+      "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 }
 
 process_surf() {
     local sub_file_idx="$1"
     local BASE_PATH="."
 
-    local FRAME_START=200
-    local FRAME_LENGTH=40
+    prepare_subject_data "$sub_file_idx" "$BASE_PATH" || return 1
 
-    # find file path in DNAnexus
-    local dx_rel_path=$(
-      dx find data --name "${sub_file_idx}.zip" --json \
-      | jq -r '.[0] | .describe.folder + "/" + .describe.name' 2>/dev/null || true
-    )
-
-    if [[ -z "$dx_rel_path" ]]; then
-        echo "File ${sub_file_idx}.zip not found in DNAnexus."
-        return 1
-    fi
-
-    local f_path="/mnt/project/${dx_rel_path}"
-
-    if [[ ! -f "$f_path" ]]; then
-        echo "File path $f_path does not exist."
-        return 1
-    fi
-
-    # unzip and prepare output directory
-    mkdir -p "${BASE_PATH}/${sub_file_idx}"
-    python3 -m zipfile -e "$f_path" "${BASE_PATH}/${sub_file_idx}"
-
-    export FSLOUTPUTTYPE=NIFTI
+    local SUBJECT_DIR="${BASE_PATH}/${sub_file_idx}"
 
     # convert to npy.zst using the generated nifti_process.py
     python3 "$SCRIPT_NAME" \
       -t 2D \
-      -i "${BASE_PATH}/${sub_file_idx}/surf_fMRI/CIFTIs/bb.rfMRI.MNI.MSMAll.dtseries.nii" \
-      -o "${BASE_PATH}/${sub_file_idx}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
+      -i "${SUBJECT_DIR}/surf_fMRI/CIFTIs/bb.rfMRI.MNI.MSMAll.dtseries.nii" \
+      -o "${SUBJECT_DIR}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
 
     # upload to DNAnexus
     dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/surf_fMRI/${sub_file_idx}"
@@ -170,7 +155,7 @@ process_surf() {
       --wait \
       --no-progress \
       --path "${DX_PROJECT_CONTEXT_ID}:/datasets/surf_fMRI/${sub_file_idx}/" \
-      "${BASE_PATH}/${sub_file_idx}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
+      "${SUBJECT_DIR}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
 }
 
 sub_file_idx="1044210_20227_2_0"
