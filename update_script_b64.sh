@@ -36,10 +36,10 @@ zstd -19 < "$PY_SCRIPT" | base64 -w 76 > "$TMP_B64"
 #    Replacement range: from the first line `base64 -d << 'EOF'`
 #    up to the following solitary `EOF` line
 awk -v b64_file="$TMP_B64" '
-BEGIN { inblock = 0 }
+BEGIN { inblock = 0; replaced = 0 }
 
-# Match the line containing base64 -d << '"'"'EOF'"'"' (there may be a pipe or more after it)
-/^base64 -d << '"'"'EOF'"'"'/ {
+# Match the line (optionally indented) containing: base64 -d << '\''EOF'\''
+/^[[:space:]]*base64[[:space:]]+-d[[:space:]]+<<[[:space:]]+'\''EOF'\''/ {
     print
     # Insert the new base64 content
     while ((getline line < b64_file) > 0) {
@@ -47,6 +47,7 @@ BEGIN { inblock = 0 }
     }
     close(b64_file)
     inblock = 1
+    replaced = 1
     next
 }
 
@@ -62,6 +63,14 @@ inblock { next }
 
 # All other lines are passed through unchanged
 { print }
+
+END {
+    if (replaced == 0) {
+        # Non-zero exit so the shell script fails visibly if nothing was replaced
+        print "No base64 heredoc block was replaced." > "/dev/stderr"
+        exit 1
+    }
+}
 ' "$BASH_SCRIPT" > "$TMP_OUT"
 
 # 3. Overwrite the original script

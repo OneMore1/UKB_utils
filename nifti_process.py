@@ -129,6 +129,8 @@ if __name__ == '__main__':
 
     data = data.astype(np.float16)
 
+    print(f'Data shape after processing: {data.shape}, size: {data.nbytes / (1024 ** 2):.2f} MiB')
+
     if output_path.endswith('.npy'):
         np.save(output_path, data, allow_pickle=False)
     else:
