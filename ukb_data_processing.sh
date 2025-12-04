@@ -71,6 +71,8 @@ prepare_subject_data() {
     local sub_file_idx="$1"
     local base_path="$2"
 
+    echo "[${sub_file_idx}] Locating archive in DNAnexus..."
+
     # Locate, validate, and unpack the DNAnexus zip for the subject.
     local dx_rel_path=$(
       dx find data --name "${sub_file_idx}.zip" --json \
@@ -89,8 +91,11 @@ prepare_subject_data() {
         return 1
     fi
 
+    echo "[${sub_file_idx}] Unzipping input archive..."
     mkdir -p "${base_path}/${sub_file_idx}"
     python3 -m zipfile -e "$f_path" "${base_path}/${sub_file_idx}/"
+
+    echo "[${sub_file_idx}] Input data ready."
 }
 
 process_rfMRI() {
@@ -104,15 +109,19 @@ process_rfMRI() {
 
     local SUBJECT_DIR="${BASE_PATH}/${sub_file_idx}"
 
+    echo "[${sub_file_idx}] Starting rfMRI processing..."
+
     export FSLOUTPUTTYPE=NIFTI
 
     # cut frames
+    echo "[${sub_file_idx}] Cutting frames ${FRAME_START}-${FRAME_START}+${FRAME_LENGTH}..."
     fslroi \
       "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
       "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
       0 -1 0 -1 0 -1 "$FRAME_START" "$FRAME_LENGTH"
 
     # warp to MNI space
+    echo "[${sub_file_idx}] Warping to MNI space..."
     applywarp \
       -i "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
       -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" \
@@ -121,18 +130,22 @@ process_rfMRI() {
       --interp=spline
 
     # convert to npy.zst using the generated nifti_process.py
+    echo "[${sub_file_idx}] Converting warped volume to npy.zst..."
     python3 "$SCRIPT_NAME" \
       -t 4D \
       -i "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
       -o "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 
     # upload to DNAnexus
+    echo "[${sub_file_idx}] Uploading rfMRI artifact to DNAnexus..."
     dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI/${sub_file_idx}"
     dx upload \
       --wait \
       --no-progress \
       --path "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI/${sub_file_idx}/" \
       "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
+
+    echo "[${sub_file_idx}] rfMRI processing complete."
 }
 
 process_surf() {
@@ -143,19 +156,25 @@ process_surf() {
 
     local SUBJECT_DIR="${BASE_PATH}/${sub_file_idx}"
 
+    echo "[${sub_file_idx}] Starting surface processing..."
+
     # convert to npy.zst using the generated nifti_process.py
+    echo "[${sub_file_idx}] Converting surface dtseries to npy.zst..."
     python3 "$SCRIPT_NAME" \
       -t 2D \
       -i "${SUBJECT_DIR}/surf_fMRI/CIFTIs/bb.rfMRI.MNI.MSMAll.dtseries.nii" \
       -o "${SUBJECT_DIR}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
 
     # upload to DNAnexus
+    echo "[${sub_file_idx}] Uploading surface artifact to DNAnexus..."
     dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/surf_fMRI/${sub_file_idx}"
     dx upload \
       --wait \
       --no-progress \
       --path "${DX_PROJECT_CONTEXT_ID}:/datasets/surf_fMRI/${sub_file_idx}/" \
       "${SUBJECT_DIR}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
+
+    echo "[${sub_file_idx}] Surface processing complete."
 }
 
 sub_file_idx="1044210_20227_2_0"
