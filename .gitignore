@@ -1,0 +1,15 @@
+__pycache__/
+
+.idea/
+.vscode/
+
+.old/
+
+*.simg
+*.tar
+*.zip
+*.zst
+*.npy
+*.nii
+*.csv
+*.xls*
