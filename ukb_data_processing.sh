@@ -84,16 +84,13 @@ prepare_subject_data() {
         return 1
     fi
 
-    local f_path="/mnt/project/${dx_rel_path}"
-
-    if [[ ! -f "$f_path" ]]; then
-        echo "File path $f_path does not exist."
-        return 1
-    fi
+    echo "[${sub_file_idx}] Downloading input archive..."
+    mkdir -p "${base_path}/${sub_file_idx}"
+    dx download --no-progress "$dx_rel_path" -o "${base_path}/${sub_file_idx}/"
 
     echo "[${sub_file_idx}] Unzipping input archive..."
-    mkdir -p "${base_path}/${sub_file_idx}"
-    python3 -m zipfile -e "$f_path" "${base_path}/${sub_file_idx}/"
+    python3 -m zipfile \
+    -e "${base_path}/${sub_file_idx}/${sub_file_idx}.zip" "${base_path}/${sub_file_idx}/"
 
     echo "[${sub_file_idx}] Input data ready."
 }
