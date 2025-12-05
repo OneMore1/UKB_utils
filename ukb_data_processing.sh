@@ -106,6 +106,15 @@ process_rfMRI() {
 
     local SUBJECT_DIR="${base_path}/${sub_file_idx}"
 
+    # check required files
+    if [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" ]] \
+    || [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" ]] \
+    || [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" ]]; then
+        echo "Required file not found for subject ${sub_file_idx}."
+        rm -rf "${SUBJECT_DIR}"
+        return 1
+    fi
+
     echo "[${sub_file_idx}] Starting rfMRI processing..."
 
     export FSLOUTPUTTYPE=NIFTI
@@ -152,6 +161,13 @@ process_surf() {
     prepare_subject_data "$sub_file_idx" "$base_path" || return 1
 
     local SUBJECT_DIR="${base_path}/${sub_file_idx}"
+
+    # check required files
+    if [[ ! -f "${SUBJECT_DIR}/surf_fMRI/CIFTIs/bb.rfMRI.MNI.MSMAll.dtseries.nii" ]]; then
+        echo "Required surface file not found for subject ${sub_file_idx}."
+        rm -rf "${SUBJECT_DIR}"
+        return 1
+    fi
 
     echo "[${sub_file_idx}] Starting surface processing..."
 
