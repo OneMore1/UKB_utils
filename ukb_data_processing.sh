@@ -146,6 +146,8 @@ process_rfMRI() {
       "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 
     echo "[${sub_file_idx}] rfMRI processing complete."
+
+    rm -rf "${SUBJECT_DIR}"
 }
 
 process_surf() {
@@ -175,6 +177,8 @@ process_surf() {
       "${SUBJECT_DIR}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
 
     echo "[${sub_file_idx}] Surface processing complete."
+
+    rm -rf "${SUBJECT_DIR}"
 }
 
 if [[ $# -lt 1 ]]; then
