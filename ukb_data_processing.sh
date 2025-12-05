@@ -177,7 +177,12 @@ process_surf() {
     echo "[${sub_file_idx}] Surface processing complete."
 }
 
-sub_file_idx="1044210_20227_2_0"
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 <sub_file_idx>"
+  exit 1
+fi
+
+sub_file_idx="$1"
 sub_type_id=$(cut -d'_' -f2 <<< "$sub_file_idx")
 
 if [[ "${sub_type_id}" == "20227" ]]; then
