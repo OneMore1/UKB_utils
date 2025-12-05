@@ -178,10 +178,11 @@ process_surf() {
 }
 
 sub_file_idx="1044210_20227_2_0"
+sub_type_id=$(cut -d'_' -f2 <<< "$sub_file_idx")
 
-if [[ "${sub_file_idx##*_}" == "20227" ]]; then
+if [[ "${sub_type_id}" == "20227" ]]; then
     process_rfMRI "$sub_file_idx"
-elif [[ "${sub_file_idx##*_}" == "32136" ]]; then
+elif [[ "${sub_type_id}" == "32136" ]]; then
     process_surf "$sub_file_idx"
 else
     echo "Unknown sub_file_idx type: $sub_file_idx"
