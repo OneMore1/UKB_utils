@@ -97,14 +97,14 @@ prepare_subject_data() {
 
 process_rfMRI() {
     local sub_file_idx="$1"
-    local BASE_PATH="."
+    local base_path="$2"
 
     local FRAME_START=200
     local FRAME_LENGTH=40
 
-    prepare_subject_data "$sub_file_idx" "$BASE_PATH" || return 1
+    prepare_subject_data "$sub_file_idx" "$base_path" || return 1
 
-    local SUBJECT_DIR="${BASE_PATH}/${sub_file_idx}"
+    local SUBJECT_DIR="${base_path}/${sub_file_idx}"
 
     echo "[${sub_file_idx}] Starting rfMRI processing..."
 
@@ -143,17 +143,15 @@ process_rfMRI() {
       "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 
     echo "[${sub_file_idx}] rfMRI processing complete."
-
-    rm -rf "${SUBJECT_DIR}"
 }
 
 process_surf() {
     local sub_file_idx="$1"
-    local BASE_PATH="."
+    local base_path="$2"
 
-    prepare_subject_data "$sub_file_idx" "$BASE_PATH" || return 1
+    prepare_subject_data "$sub_file_idx" "$base_path" || return 1
 
-    local SUBJECT_DIR="${BASE_PATH}/${sub_file_idx}"
+    local SUBJECT_DIR="${base_path}/${sub_file_idx}"
 
     echo "[${sub_file_idx}] Starting surface processing..."
 
@@ -174,8 +172,6 @@ process_surf() {
       "${SUBJECT_DIR}/bb.rfMRI.MNI.MSMAll.dtseries.npy.zst"
 
     echo "[${sub_file_idx}] Surface processing complete."
-
-    rm -rf "${SUBJECT_DIR}"
 }
 
 if [[ $# -lt 1 ]]; then
@@ -184,13 +180,16 @@ if [[ $# -lt 1 ]]; then
 fi
 
 sub_file_idx="$1"
+BASE_PATH="."
 sub_type_id=$(cut -d'_' -f2 <<< "$sub_file_idx")
 
 if [[ "${sub_type_id}" == "20227" ]]; then
-    process_rfMRI "$sub_file_idx"
+    process_rfMRI "$sub_file_idx" "${BASE_PATH}"
 elif [[ "${sub_type_id}" == "32136" ]]; then
-    process_surf "$sub_file_idx"
+    process_surf "$sub_file_idx" "${BASE_PATH}"
 else
     echo "Unknown sub_file_idx type: $sub_file_idx"
     exit 1
 fi
+
+rm -rf ${BASE_PATH}/${sub_file_idx}
