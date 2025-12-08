@@ -3937,3 +3937,7 @@ sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_id
   process_rfMRI "$sub_file_idx" "$BASE_PATH"
   rm -rf ${BASE_PATH}/${sub_file_idx}
 done
+
+rm "$SCRIPT_NAME"
+rm "$TXT_FILE"
+rm -- "$0"
