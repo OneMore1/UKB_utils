@@ -100,7 +100,7 @@ process_rfMRI() {
     local base_path="$2"
 
     local FRAME_START=200
-    local FRAME_LENGTH=40
+    local FRAME_LENGTH=100
 
     prepare_subject_data "$sub_file_idx" "$base_path" || return 1
 
