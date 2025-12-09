@@ -3940,4 +3940,3 @@ done
 
 rm "$SCRIPT_NAME"
 rm "$TXT_FILE"
-rm -- "$0"
