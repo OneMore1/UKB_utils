@@ -40,7 +40,8 @@ prepare_subject_data() {
           | jq -r '.[0] | .describe.folder + "/" + .describe.name' 2>/dev/null || true
         )
 
-        if [[ -z "$rel_path" ]]; then
+        # $rel_path may be "/" if not found
+        if [[ -z "$rel_path" ]] || [[ "$rel_path" == "/" ]]; then
             echo "File ${subject_idx}_rfMRI_${task}_${sub_session}.zip not found in DNAnexus."
             return 1
         fi
@@ -48,6 +49,11 @@ prepare_subject_data() {
         echo "[${subject_idx}] Downloading input archive for task ${task}..."
         mkdir -p "${base_path}/${subject_idx}"
         dx download --no-progress "$rel_path" -o "${base_path}/${subject_idx}/"
+
+        if [[ ! -f "${base_path}/${subject_idx}/${file_name}" ]]; then
+            echo "Downloaded file ${file_name} not found."
+            return 1
+        fi
 
         echo "[${subject_idx}] Unzipping input archive for task ${task}..."
         python3 -m zipfile \
