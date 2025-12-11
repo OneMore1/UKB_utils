@@ -87,7 +87,9 @@ process_atlas() {
         --wait \
         --no-progress \
         --path "${DX_PROJECT_CONTEXT_ID}:/datasets/atlas/${subject_idx}/${file_name}" \
-        "${SUBJECT_DIR}/${file_name}"
+        "${SUBJECT_DIR}/${file_name}" \
+        --property "subject_id=${subject_idx}" \
+        --property "session=${sub_session}"
     done    
     
     echo "[${subject_idx}] Atlas processing completed."
@@ -104,7 +106,7 @@ sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_id
   session=$(echo "$sub_file_idx" | cut -d'_' -f3)
   echo "process_atlas $sub_id $session"
   process_atlas "$BASE_PATH" "$sub_id" "$session"
-  rm -rf ${BASE_PATH}/${sub_file_idx}
+  rm -rf ${BASE_PATH}/${sub_id}
 done
 
 rm "$SCRIPT_NAME"
