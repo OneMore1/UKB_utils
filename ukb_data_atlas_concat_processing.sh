@@ -80,11 +80,15 @@ process_atlas() {
       --output_dir "${SUBJECT_DIR}"
     
     rm -f ${SUBJECT_DIR}/*.csv.gz
-    dx upload \
-      --wait \
-      --no-progress \
-      --path "${DX_PROJECT_CONTEXT_ID}:/datasets/atlas/${sub_file_idx}/" \
-      "${SUBJECT_DIR}/*"
+    dx mkdir -p "/datasets/atlas/${subject_idx}/"
+    local file_list=("roi50.npy" "roi100.npy" "roi360.npy" "roi400.npy")
+    for file_name in "${file_list[@]}"; do
+      dx upload \
+        --wait \
+        --no-progress \
+        --path "${DX_PROJECT_CONTEXT_ID}:/datasets/atlas/${subject_idx}/${file_name}" \
+        "${SUBJECT_DIR}/${file_name}"
+    done    
     
     echo "[${subject_idx}] Atlas processing completed."
 }
