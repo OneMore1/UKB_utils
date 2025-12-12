@@ -86,13 +86,13 @@ process_atlas() {
       --output_dir "${SUBJECT_DIR}"
     
     rm -f ${SUBJECT_DIR}/*.csv.gz
-    dx mkdir -p "/datasets/atlas/${subject_idx}/"
+    dx mkdir -p "/datasets/atlas_concat/${subject_idx}_${sub_session}/"
     local file_list=("roi50.npy" "roi100.npy" "roi360.npy" "roi400.npy")
     for file_name in "${file_list[@]}"; do
       dx upload \
         --wait \
         --no-progress \
-        --path "${DX_PROJECT_CONTEXT_ID}:/datasets/atlas/${subject_idx}/${file_name}" \
+        --path "${DX_PROJECT_CONTEXT_ID}:/datasets/atlas_concat/${subject_idx}_${sub_session}/" \
         "${SUBJECT_DIR}/${file_name}" \
         --property "subject_id=${subject_idx}" \
         --property "session=${sub_session}"
@@ -113,7 +113,7 @@ sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_id
   sub_id=$(echo "$sub_file_idx" | cut -d'_' -f1)
   session=$(echo "$sub_file_idx" | cut -d'_' -f3)
   echo "process_atlas $sub_id $session"
-  process_atlas "$BASE_PATH" "$sub_id" "$session"
+  process_atlas "$BASE_PATH" "$sub_id" "$session" || { echo "skip $sub_id $session"; continue; }
 done
 
 rm "$SCRIPT_NAME"
