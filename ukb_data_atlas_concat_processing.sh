@@ -59,7 +59,7 @@ prepare_subject_data() {
         python3 -m zipfile \
         -e "${base_path}/${subject_idx}/${file_name}" "${base_path}/${subject_idx}/"
 
-        rm "${base_path}/${subject_idx}/${file_name}"
+        rm -f "${base_path}/${subject_idx}/${file_name}"
     done
 }
 
@@ -116,5 +116,5 @@ sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_id
   process_atlas "$BASE_PATH" "$sub_id" "$session" || { echo "skip $sub_id $session"; continue; }
 done
 
-rm "$SCRIPT_NAME"
-rm "$TXT_FILE"
+rm -f "$SCRIPT_NAME"
+rm -f "$TXT_FILE"
