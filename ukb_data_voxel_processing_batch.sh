@@ -3851,7 +3851,7 @@ prepare_subject_data() {
       | jq -r '.[0] | .describe.folder + "/" + .describe.name' 2>/dev/null || true
     )
 
-    if [[ -z "$dx_rel_path" ]]; then
+    if [[ -z "$dx_rel_path" ]] || [[ "$dx_rel_path" == "/" ]]; then
         echo "File ${sub_file_idx}.zip not found in DNAnexus."
         return 1
     fi
@@ -3860,9 +3860,17 @@ prepare_subject_data() {
     mkdir -p "${base_path}/${sub_file_idx}"
     dx download --no-progress "$dx_rel_path" -o "${base_path}/${sub_file_idx}/"
 
+    if [[ ! -f "${base_path}/${sub_file_idx}/${sub_file_idx}.zip" ]]; then
+        echo "Failed to download ${sub_file_idx}.zip from DNAnexus."
+        rm -rf "${base_path}/${sub_file_idx}"
+        return 1
+    fi
+
     echo "[${sub_file_idx}] Unzipping input archive..."
     python3 -m zipfile \
     -e "${base_path}/${sub_file_idx}/${sub_file_idx}.zip" "${base_path}/${sub_file_idx}/"
+
+    rm -f "${base_path}/${sub_file_idx}/${sub_file_idx}.zip"
 
     echo "[${sub_file_idx}] Input data ready."
 }
@@ -3923,6 +3931,8 @@ process_rfMRI() {
       --path "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI/${sub_file_idx}/" \
       "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 
+    rm -rf "${SUBJECT_DIR}"
+
     echo "[${sub_file_idx}] rfMRI processing complete."
 }
 
@@ -3934,8 +3944,7 @@ BASE_PATH="."
 
 sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_idx; do
   echo "process_rfMRI $sub_file_idx $BASE_PATH"
-  process_rfMRI "$sub_file_idx" "$BASE_PATH"
-  rm -rf ${BASE_PATH}/${sub_file_idx}
+  process_rfMRI "$sub_file_idx" "$BASE_PATH"  || { echo "skip $sub_file_idx"; continue; }
 done
 
 rm "$SCRIPT_NAME"
