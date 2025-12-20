@@ -94,7 +94,7 @@ process_fixing() {
     -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" \
     -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" \
     -o "${SUBJECT_DIR}/fMRI/rfMRI.ica/mask_MNI.nii" \
-    --interp=spline
+    --interp=nn
 
   echo "[${sub_file_idx}] Getting fMRI data in MNI space..."
   name="rfMRI_s200l100_MNI_nonlin.npy.zst"
