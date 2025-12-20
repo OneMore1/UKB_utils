@@ -140,7 +140,7 @@ dx upload fMRI_masked_s${START_LINE}_e${END_LINE}.tar --path /results/
 dx mkdir -p /datasets/fMRI_masked/
 dx upload \
   --wait \
-  --path "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI_masked/" \
+  --path "/datasets/fMRI_masked/" \
   fMRI_masked_s${START_LINE}_e${END_LINE}.tar
 
 rm -rf fMRI_masked_s${START_LINE}_e${END_LINE}.tar
