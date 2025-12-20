@@ -25,6 +25,12 @@ if ! command -v fslroi &>/dev/null || ! command -v applywarp &>/dev/null; then
   exit 1
 fi
 
+SUB_LIST="voxel_fix_list_dedup.txt"
+dx download --no-progress "voxel_fix_list_dedup.txt"
+
+SCRIPT_NAME="nifti_mask_proc.py"
+wget https://raw.githubusercontent.com/OneMore1/UKB_utils/refs/heads/master/$SCRIPT_NAME
+
 prepare_subject_data() {
   local sub_file_idx="$1"
   local base_path="$2"
@@ -94,7 +100,7 @@ process_fixing() {
 
   mkdir -p fMRI_masked
 
-  python3 nifti_mask_proc.py \
+  python3 $SCRIPT_NAME \
     "${SUBJECT_DIR}/rfMRI_s200l100_MNI_nonlin.npy.zst" \
     "${SUBJECT_DIR}/fMRI/rfMRI.ica/mask_MNI.nii" \
     "fMRI_masked/${sub_file_idx}_rfMRI_s200l100_MNI_nonlin_masked"
@@ -109,7 +115,7 @@ END_LINE="$2"
 
 BASE_PATH="."
 
-sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_idx; do
+sed -n "${START_LINE},${END_LINE}p" "$SUB_LIST" | while IFS= read -r sub_file_idx; do
   echo "process_rfMRI $sub_file_idx $BASE_PATH"
   process_rfMRI "$sub_file_idx" "$BASE_PATH" || {
     echo "skip $sub_file_idx"
@@ -118,7 +124,7 @@ sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_id
 done
 
 rm "$SCRIPT_NAME"
-rm "$TXT_FILE"
+rm "$SUB_LIST"
 
 tar -cvf fMRI_masked_s${START_LINE}_e${END_LINE}.tar fMRI_masked/
 rm -rf fMRI_masked
