@@ -91,16 +91,14 @@ def pad_crop(img_data: np.ndarray,
     new_data = img_data[
         slice(pxL, img_X - pxR) if mx == 'crop' else slice(None),
         slice(pyL, img_Y - pyR) if my == 'crop' else slice(None),
-        slice(pzL, img_Z - pzR) if mz == 'crop' else slice(None),
-        :
+        slice(pzL, img_Z - pzR) if mz == 'crop' else slice(None)
     ]
 
     # Apply symmetric padding
     pad_width = (
         (pxL if mx == 'pad' else 0, pxR if mx == 'pad' else 0),
         (pyL if my == 'pad' else 0, pyR if my == 'pad' else 0),
-        (pzL if mz == 'pad' else 0, pzR if mz == 'pad' else 0),
-        (0, 0)
+        (pzL if mz == 'pad' else 0, pzR if mz == 'pad' else 0)
     )
     if any(pw != (0, 0) for pw in pad_width):
         new_data = np.pad(new_data, pad_width=pad_width, mode='constant', constant_values=fill_value)

@@ -29,7 +29,7 @@ SUB_LIST="voxel_fix_list_dedup.txt"
 dx download --no-progress "voxel_fix_list_dedup.txt"
 
 SCRIPT_NAME="nifti_mask_proc.py"
-wget https://raw.githubusercontent.com/OneMore1/UKB_utils/refs/heads/master/$SCRIPT_NAME
+wget https://raw.githubusercontent.com/OneMore1/UKB_utils/master/$SCRIPT_NAME
 
 prepare_subject_data() {
   local sub_file_idx="$1"
@@ -96,10 +96,12 @@ process_fixing() {
     -o "${SUBJECT_DIR}/fMRI/rfMRI.ica/mask_MNI.nii" \
     --interp=spline
 
+  echo "[${sub_file_idx}] Getting fMRI data in MNI space..."
   dx download --no-progress /datasets/fMRI/${sub_file_idx}/rfMRI_s200l100_MNI_nonlin.npy.zst -o "${SUBJECT_DIR}/rfMRI_s200l100_MNI_nonlin.npy.zst"
 
   mkdir -p fMRI_masked
 
+  echo "[${sub_file_idx}] Applying mask to fMRI data..."
   python3 $SCRIPT_NAME \
     "${SUBJECT_DIR}/rfMRI_s200l100_MNI_nonlin.npy.zst" \
     "${SUBJECT_DIR}/fMRI/rfMRI.ica/mask_MNI.nii" \
@@ -116,8 +118,8 @@ END_LINE="$2"
 BASE_PATH="."
 
 sed -n "${START_LINE},${END_LINE}p" "$SUB_LIST" | while IFS= read -r sub_file_idx; do
-  echo "process_rfMRI $sub_file_idx $BASE_PATH"
-  process_rfMRI "$sub_file_idx" "$BASE_PATH" || {
+  echo "process_fixing $sub_file_idx $BASE_PATH"
+  process_fixing "$sub_file_idx" "$BASE_PATH" || {
     echo "skip $sub_file_idx"
     continue
   }
