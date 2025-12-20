@@ -136,7 +136,7 @@ rm "$SUB_LIST"
 tar -cvf fMRI_masked_s${START_LINE}_e${END_LINE}.tar fMRI_masked/
 rm -rf fMRI_masked
 
-dx upload fMRI_masked_s${START_LINE}_e${END_LINE}.tar --path /results/
+echo "[INFO] Uploading to /datasets/fMRI_masked/ ..."
 dx mkdir -p /datasets/fMRI_masked/
 dx upload \
   --wait \
