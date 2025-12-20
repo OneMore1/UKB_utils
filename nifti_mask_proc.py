@@ -136,6 +136,36 @@ def mask_fmri(fmri: np.ndarray, mask_path: str) -> np.ndarray:
     return masked_fmri
 
 
+def global_zscore_nonzero(arr: np.ndarray, mean=None, std=None, eps=1e-8):
+    """
+    Global z-score on non-zero entries of arr. Zeros remain zeros.
+
+    If mean/std are provided, use them (so you can apply the same global stats
+    to multiple arrays, e.g., pre and post).
+    """
+    arr = np.asarray(arr)
+    nz = (arr != 0)
+
+    if mean is None or std is None:
+        n = int(np.count_nonzero(nz))
+        if n == 0:
+            return arr, 0.0, 1.0
+
+        # Because zeros are excluded by count, sums over the whole array are OK
+        s = arr.sum(dtype=np.float64)
+        ss = np.multiply(arr, arr, dtype=np.float64).sum(dtype=np.float64)
+
+        mean = s / n
+        var = ss / n - mean * mean
+        if var < eps:
+            var = eps
+        std = float(np.sqrt(var))
+
+    out = arr.astype(np.float16)
+    out[nz] = (out[nz] - mean) / std
+    return out, float(mean), float(std)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Apply a binary mask to fMRI data.')
     parser.add_argument('fmri_path', type=str, help='Path to the input fMRI NIfTI file.')
@@ -153,5 +183,11 @@ if __name__ == '__main__':
     masked_fmri_data_pre = masked_fmri_data[..., :40]
     masked_fmri_data_post = masked_fmri_data[..., -40:]
 
-    save(args.output_prefix + '_pre40_masked.npy.zst', masked_fmri_data_pre)
-    save(args.output_prefix + '_post40_masked.npy.zst', masked_fmri_data_post)
+    masked_fmri_data_pre_z, pre_mean, pre_std = global_zscore_nonzero(masked_fmri_data_pre)
+    masked_fmri_data_post_z, post_mean, post_std = global_zscore_nonzero(masked_fmri_data_post)
+
+    save(args.output_prefix + '_pre40_masked_z.npy.zst', masked_fmri_data_pre_z)
+    save(args.output_prefix + '_post40_masked_z.npy.zst', masked_fmri_data_post_z)
+    savez(args.output_prefix + '_masking_stats.npz.zst',
+          pre_mean=pre_mean, pre_std=pre_std,
+          post_mean=post_mean, post_std=post_std)
