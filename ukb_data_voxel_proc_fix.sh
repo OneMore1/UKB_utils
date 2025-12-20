@@ -97,7 +97,12 @@ process_fixing() {
     --interp=spline
 
   echo "[${sub_file_idx}] Getting fMRI data in MNI space..."
-  dx download --no-progress /datasets/fMRI/${sub_file_idx}/rfMRI_s200l100_MNI_nonlin.npy.zst -o "${SUBJECT_DIR}/rfMRI_s200l100_MNI_nonlin.npy.zst"
+  name="rfMRI_s200l100_MNI_nonlin.npy.zst"
+  folder="/datasets/fMRI/${sub_file_idx}"
+
+  latest_id="$(dx find data --class file --name "$name" --path "$folder" --json | jq -r 'sort_by(.describe.modified // 0) | last | .id')"
+
+  dx download --no-progress "$latest_id" -o "${SUBJECT_DIR}/${name}"
 
   mkdir -p fMRI_masked
 
@@ -132,8 +137,8 @@ tar -cvf fMRI_masked_s${START_LINE}_e${END_LINE}.tar fMRI_masked/
 rm -rf fMRI_masked
 
 dx upload fMRI_masked_s${START_LINE}_e${END_LINE}.tar --path /results/
+dx mkdir -p /datasets/fMRI_masked/
 dx upload \
   --wait \
-  --no-progress \
   --path "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI_masked/" \
   fMRI_masked_s${START_LINE}_e${END_LINE}.tar
