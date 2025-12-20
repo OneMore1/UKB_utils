@@ -63,7 +63,7 @@ def pad_crop(img_data: np.ndarray,
     if img_data.ndim != 4:
         raise ValueError(f'Expect 4D array (X, Y, Z, T), got shape {img_data.shape}')
 
-    img_X, img_Y, img_Z, img_T = img_data.shape
+    img_X, img_Y, img_Z, _ = img_data.shape
 
     # Generate plan for each axis
     pxL, pxR, mx = split_plan(img_X, target_xyz[0])

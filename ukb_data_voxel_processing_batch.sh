@@ -3892,7 +3892,7 @@ process_rfMRI() {
     || [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" ]]; then
         echo "Required file not found for subject ${sub_file_idx}."
         rm -rf "${SUBJECT_DIR}"
-        return 0
+        return 1
     fi
 
     echo "[${sub_file_idx}] Starting rfMRI processing..."
