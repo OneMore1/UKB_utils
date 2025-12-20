@@ -17,3 +17,4 @@ fMRI_ukb/
 *.csv
 *.xls*
 *.b64
+*.nii*
