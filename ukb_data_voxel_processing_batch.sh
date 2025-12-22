@@ -33,8 +33,8 @@ wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/nifti_proces
 wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/volume2fc.py
 
 # extract subject id txt
-TXT_FILE=fMRI_20227_id.txt
-# TODO
+TXT_FILE=final_list_with_disease_mapped.csv
+dx download --no-progress /info_utils/final_list_with_disease_mapped.csv
 
 atlas_list=(
   "merged_atlas150"
@@ -184,12 +184,14 @@ process_rfMRI() {
   echo "[${sub_file_idx}] rfMRI processing complete."
 }
 
-START_LINE="$1"
-END_LINE="$2"
+START_LINE=$(($1 + 1))
+END_LINE=$(($2 + 1))
 
 BASE_PATH="."
 
-sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_idx; do
+sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" \
+  | awk -F',' 'NF {gsub(/^\s+|\s+$/, "", $1); print $1}' \
+  | while IFS= read -r sub_file_idx; do
   echo "process_rfMRI $sub_file_idx $BASE_PATH"
   process_rfMRI "$sub_file_idx" "$BASE_PATH" || {
     echo "skip $sub_file_idx"
