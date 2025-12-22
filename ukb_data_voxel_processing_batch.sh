@@ -193,7 +193,8 @@ process_rfMRI() {
       -i ./atlas_data/${atlas}.nii.gz \
       -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/example_func.nii.gz" \
       -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/standard2example_func_warp.nii" \
-      -o ${SUBJECT_DIR}/atlas_data/${atlas}.nii
+      -o ${SUBJECT_DIR}/atlas_data/${atlas}.nii \
+      --interp=nn
 
     if [[ " ${atlas_list_vox2fc[*]} " == *" ${atlas} "* ]]; then
       echo "[${sub_file_idx}] Generating voxel-to-FC for atlas: ${atlas}..."

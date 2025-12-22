@@ -41,19 +41,6 @@ def extract_roi_time_series(fmri_path: str, atlas_path: str) -> np.ndarray:
     return roi_time_series
 
 
-def visualize_roi_time_series(roi_time_series: np.ndarray, out_png: str) -> None:
-    """保存 ROI×time 的热力图，用于快速检查 ROI 序列质量。"""
-    plt.figure(figsize=(8, 7))
-    im = plt.imshow(roi_time_series.T, cmap='RdBu_r', vmin=-1.0, vmax=1.0, aspect='equal')
-    plt.xlabel('ROI')
-    plt.ylabel('timepoints')
-    plt.colorbar(im, fraction=0.046, pad=0.04)
-    plt.tight_layout()
-    plt.savefig(out_png, dpi=150)
-    plt.close()
-    print(f"ROI 时间序列热力图已保存到 {out_png}")
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="从 4D fMRI 和 3D atlas 计算 ROI×time 序列，并保存为 .npy 和可视化图像。")
@@ -70,8 +57,6 @@ def main():
     roi_ts = extract_roi_time_series(args.fmri, args.atlas)
     np.save(args.out_npy, roi_ts)
     print(f"ROI 时间序列已保存到 {args.out_npy}")
-
-    visualize_roi_time_series(roi_ts, args.out_fig)
 
 
 if __name__ == '__main__':
