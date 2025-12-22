@@ -141,11 +141,11 @@ process_rfMRI() {
 
   # upload to DNAnexus
   echo "[${sub_file_idx}] Uploading rfMRI artifact to DNAnexus..."
-  dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI_rb/${sub_file_idx}"
+  dx mkdir -p "/datasets/fMRI_rb/${sub_file_idx}"
   dx upload \
     --wait \
     --no-progress \
-    --path "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI_rb/${sub_file_idx}/" \
+    --path "/datasets/fMRI_rb/${sub_file_idx}/" \
     "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 
   # ========== ROI Atlas Processing Steps ==========
@@ -155,7 +155,7 @@ process_rfMRI() {
     -o "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/standard2example_func_warp.nii" \
     -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/example_func.nii.gz"
 
-  dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/voxel_atlas_rb/${sub_file_idx}"
+  dx mkdir -p "/datasets/voxel_atlas_rb/${sub_file_idx}"
 
   for atlas in "${atlas_list[@]}"; do
     echo "[${sub_file_idx}] Processing atlas: ${atlas}..."
@@ -174,7 +174,7 @@ process_rfMRI() {
     dx upload \
       --wait \
       --no-progress \
-      --path "${DX_PROJECT_CONTEXT_ID}:/datasets/voxel_atlas_rb/${sub_file_idx}/" \
+      --path "/datasets/voxel_atlas_rb/${sub_file_idx}/" \
       "${SUBJECT_DIR}/${atlas}.npy"
   done
 
