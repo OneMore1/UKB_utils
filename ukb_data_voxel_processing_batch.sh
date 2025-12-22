@@ -195,12 +195,6 @@ process_rfMRI() {
       -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/standard2example_func_warp.nii" \
       -o ${SUBJECT_DIR}/atlas_data/${atlas}.nii
 
-    python3 augment_rois.py \
-      --fmri "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
-      --adjacency_dir "./atlas_data/adjacency" \
-      --atlas_dir "${SUBJECT_DIR}/atlas_data" \
-      --output_dir "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}" \
-
     if [[ " ${atlas_list_vox2fc[*]} " == *" ${atlas} "* ]]; then
       echo "[${sub_file_idx}] Generating voxel-to-FC for atlas: ${atlas}..."
       python3 volume2fc.py \
@@ -208,15 +202,21 @@ process_rfMRI() {
         --atlas "${SUBJECT_DIR}/atlas_data/${atlas}.nii" \
         --out-npy "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}/vox2fc_${atlas}.npy"
     fi
-
-    # upload folder "${SUBJECT_DIR}/voxel2atlas"
-    dx upload \
-      --wait \
-      --no-progress \
-      --recursive \
-      --path "/datasets/voxel_atlas_rb/" \
-      "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}"
   done
+
+  python3 augment_rois.py \
+    --fmri "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
+    --adjacency_dir "./atlas_data/adjacency" \
+    --atlas_dir "${SUBJECT_DIR}/atlas_data" \
+    --output_dir "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}"
+
+  # upload folder "${SUBJECT_DIR}/voxel2atlas"
+  dx upload \
+    --wait \
+    --no-progress \
+    --recursive \
+    --path "/datasets/voxel_atlas_rb/" \
+    "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}"
 
   # ========== Clean up ==========
   rm -rf "${SUBJECT_DIR}"
@@ -239,5 +239,5 @@ sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" |
     }
   done
 
-rm nifti_process.py volume2fc.py augment_rois.py
-rm "$TXT_FILE"
+rm -f nifti_process.py volume2fc.py augment_rois.py "$TXT_FILE"
+rm -rf atlas_data
