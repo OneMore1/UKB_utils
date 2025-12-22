@@ -28,20 +28,10 @@ fi
 # check DNAnexus env
 : "${DX_PROJECT_CONTEXT_ID:?DX_PROJECT_CONTEXT_ID is not set}"
 
-# download nifti_process.py
-wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/nifti_process.py
-wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/volume2fc.py
-
-# extract subject id txt
-TXT_FILE=fMRI_20227_id.txt
+# check file exists
 # TODO
 
-atlas_list=(
-  "merged_atlas150"
-  "Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm"
-  "Schaefer2018_400Parcels_7Networks_order_FSLMNI152_2mm"
-  "Tian_Subcortex_S3_3T_2009cAsym"
-)
+SCRIPT="volume2fc.py"
 
 prepare_subject_data() {
   local sub_file_idx="$1"
@@ -84,7 +74,7 @@ process_rfMRI() {
   local base_path="$2"
 
   local FRAME_START=200
-  local FRAME_LENGTH=40
+  local FRAME_LENGTH=100
 
   prepare_subject_data "$sub_file_idx" "$base_path" || return 1
 
@@ -93,9 +83,7 @@ process_rfMRI() {
   # check required files
   if [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" ]] ||
     [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" ]] ||
-    [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" ]] ||
-    [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/mask.nii.gz" ]] ||
-    [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/example_func.nii.gz" ]]; then
+    [[ ! -f "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" ]]; then
     echo "Required file not found for subject ${sub_file_idx}."
     rm -rf "${SUBJECT_DIR}"
     return 1
@@ -105,57 +93,20 @@ process_rfMRI() {
 
   export FSLOUTPUTTYPE=NIFTI
 
-  # ========== Voxel Processing Steps ==========
-  # warp mask to MNI space
-  echo "[${sub_file_idx}] Warping mask to MNI space..."
-  applywarp \
-    -i "${SUBJECT_DIR}/fMRI/rfMRI.ica/mask.nii.gz" \
-    -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" \
-    -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" \
-    -o "${SUBJECT_DIR}/mask_MNI.nii" \
-    --interp=nn
-
-  # cut frames
-  echo "[${sub_file_idx}] Cutting frames ${FRAME_START}-${FRAME_START}+${FRAME_LENGTH}..."
-  fslroi \
-    "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
-    "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
-    0 -1 0 -1 0 -1 "$FRAME_START" "$FRAME_LENGTH"
-
-  # warp to MNI space
-  echo "[${sub_file_idx}] Warping to MNI space..."
-  applywarp \
-    -i "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii" \
-    -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard.nii.gz" \
-    -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" \
-    -o "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
-    --interp=spline
-
-  # convert to npy.zst using the generated nifti_process.py
-  echo "[${sub_file_idx}] Converting warped volume to npy.zst..."
-  python3 nifti_process.py \
-    -t 4D \
-    -i "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
-    -m "${SUBJECT_DIR}/mask_MNI.nii" \
-    -o "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
-
-  # upload to DNAnexus
-  echo "[${sub_file_idx}] Uploading rfMRI artifact to DNAnexus..."
-  dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI_rb/${sub_file_idx}"
-  dx upload \
-    --wait \
-    --no-progress \
-    --path "${DX_PROJECT_CONTEXT_ID}:/datasets/fMRI_rb/${sub_file_idx}/" \
-    "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
-
-  # ========== ROI Atlas Processing Steps ==========
-  echo "[${sub_file_idx}] Generating inverse warp for atlas processing..."
   invwarp \
     -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz" \
     -o "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/standard2example_func_warp.nii" \
     -r "${SUBJECT_DIR}/fMRI/rfMRI.ica/example_func.nii.gz"
+  # -r "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}.nii"
 
-  dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/voxel_atlas_rb/${sub_file_idx}"
+  atlas_list=(
+    "merged_atlas150"
+    "Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm"
+    "Schaefer2018_400Parcels_7Networks_order_FSLMNI152_2mm"
+    "Tian_Subcortex_S3_3T_2009cAsym"
+  )
+
+  dx mkdir -p "${DX_PROJECT_CONTEXT_ID}:/datasets/voxel_atlas/${sub_file_idx}"
 
   for atlas in "${atlas_list[@]}"; do
     echo "[${sub_file_idx}] Processing atlas: ${atlas}..."
@@ -166,19 +117,18 @@ process_rfMRI() {
       -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/standard2example_func_warp.nii" \
       -o ${SUBJECT_DIR}/${atlas}.nii
 
-    python3 volume2fc.py \
+    python3 $SCRIPT \
       --fmri "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
       --atlas "${SUBJECT_DIR}/${atlas}.nii" \
       --out-npy "${SUBJECT_DIR}/${atlas}.npy"
-
+    
     dx upload \
       --wait \
       --no-progress \
-      --path "${DX_PROJECT_CONTEXT_ID}:/datasets/voxel_atlas_rb/${sub_file_idx}/" \
+      --path "${DX_PROJECT_CONTEXT_ID}:/datasets/voxel_atlas/${sub_file_idx}/" \
       "${SUBJECT_DIR}/${atlas}.npy"
   done
 
-  # ========== Clean up ==========
   rm -rf "${SUBJECT_DIR}"
 
   echo "[${sub_file_idx}] rfMRI processing complete."
@@ -197,5 +147,5 @@ sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | while IFS= read -r sub_file_id
   }
 done
 
-rm nifti_process.py volume2fc.py
+rm "$SCRIPT_NAME"
 rm "$TXT_FILE"
