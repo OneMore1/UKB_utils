@@ -31,16 +31,38 @@ fi
 # download nifti_process.py
 wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/nifti_process.py
 wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/volume2fc.py
+wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/roi_augmentation/augment_rois.py
 
 # extract subject id txt
 TXT_FILE=final_list_with_disease_mapped.csv
-dx download --no-progress /info_utils/final_list_with_disease_mapped.csv
+dx download --no-progress /mri_process_utils/final_list_with_disease_mapped.csv
+dx download --no-progress --recursive /mri_process_utils/roi_augmentation/atlas_data
 
 atlas_list=(
-  "merged_atlas150"
-  "Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm"
-  "Schaefer2018_400Parcels_7Networks_order_FSLMNI152_2mm"
-  "Tian_Subcortex_S3_3T_2009cAsym"
+  AA424_2mm
+  AAL
+  Glasser_2mm
+  Schaefer2018_100Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_200Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_300Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_400Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_500Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_600Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_700Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_800Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_900Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_1000Parcels_17Networks_order_FSLMNI152_2mm
+  Tian_Subcortex_S1_3T
+  Tian_Subcortex_S2_3T
+  Tian_Subcortex_S3_3T
+  Tian_Subcortex_S4_3T
+)
+
+atlas_list_vox2fc=(
+  Glasser_2mm
+  Schaefer2018_100Parcels_17Networks_order_FSLMNI152_2mm
+  Schaefer2018_400Parcels_17Networks_order_FSLMNI152_2mm
+  Tian_Subcortex_S3_3T
 )
 
 prepare_subject_data() {
@@ -132,12 +154,13 @@ process_rfMRI() {
     --interp=spline
 
   # convert to npy.zst using the generated nifti_process.py
+  mkdir -p "${SUBJECT_DIR}/voxel_process/${sub_file_idx}"
   echo "[${sub_file_idx}] Converting warped volume to npy.zst..."
   python3 nifti_process.py \
     -t 4D \
     -i "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.nii" \
     -m "${SUBJECT_DIR}/mask_MNI.nii" \
-    -o "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
+    -o "${SUBJECT_DIR}/voxel_process/${sub_file_idx}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
 
   # upload to DNAnexus
   echo "[${sub_file_idx}] Uploading rfMRI artifact to DNAnexus..."
@@ -145,8 +168,9 @@ process_rfMRI() {
   dx upload \
     --wait \
     --no-progress \
-    --path "/datasets/fMRI_rb/${sub_file_idx}/" \
-    "${SUBJECT_DIR}/rfMRI_s${FRAME_START}l${FRAME_LENGTH}_MNI_nonlin.npy.zst"
+    --recursive \
+    --path "/datasets/fMRI_rb/" \
+    "${SUBJECT_DIR}/voxel_process/${sub_file_idx}"
 
   # ========== ROI Atlas Processing Steps ==========
   echo "[${sub_file_idx}] Generating inverse warp for atlas processing..."
@@ -166,16 +190,26 @@ process_rfMRI() {
       -w "${SUBJECT_DIR}/fMRI/rfMRI.ica/reg/standard2example_func_warp.nii" \
       -o ${SUBJECT_DIR}/${atlas}.nii
 
-    python3 volume2fc.py \
+    python3 augment_rois.py \
       --fmri "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
       --atlas "${SUBJECT_DIR}/${atlas}.nii" \
-      --out-npy "${SUBJECT_DIR}/${atlas}.npy"
+      --output_dir "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}" \
 
+    if [[ " ${atlas_list_vox2fc[*]} " == *" ${atlas} "* ]]; then
+      echo "[${sub_file_idx}] Generating voxel-to-FC for atlas: ${atlas}..."
+      python3 volume2fc.py \
+        --fmri "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
+        --atlas "${SUBJECT_DIR}/${atlas}.nii" \
+        --out-npy "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}/vox2fc_${atlas}.npy"
+    fi
+
+    # upload folder "${SUBJECT_DIR}/voxel2atlas"
     dx upload \
       --wait \
       --no-progress \
-      --path "/datasets/voxel_atlas_rb/${sub_file_idx}/" \
-      "${SUBJECT_DIR}/${atlas}.npy"
+      --recursive \
+      --path "/datasets/voxel_atlas_rb/" \
+      "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}"
   done
 
   # ========== Clean up ==========
@@ -189,15 +223,15 @@ END_LINE=$(($2 + 1))
 
 BASE_PATH="."
 
-sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" \
-  | awk -F',' 'NF {gsub(/^\s+|\s+$/, "", $1); print $1}' \
-  | while IFS= read -r sub_file_idx; do
-  echo "process_rfMRI $sub_file_idx $BASE_PATH"
-  process_rfMRI "$sub_file_idx" "$BASE_PATH" || {
-    echo "skip $sub_file_idx"
-    continue
-  }
-done
+sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" |
+  awk -F',' 'NF {gsub(/^\s+|\s+$/, "", $1); print $1}' |
+  while IFS= read -r sub_file_idx; do
+    echo "process_rfMRI $sub_file_idx $BASE_PATH"
+    process_rfMRI "$sub_file_idx" "$BASE_PATH" || {
+      echo "skip $sub_file_idx"
+      continue
+    }
+  done
 
-rm nifti_process.py volume2fc.py
+rm nifti_process.py volume2fc.py augment_rois.py
 rm "$TXT_FILE"
