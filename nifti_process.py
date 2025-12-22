@@ -66,6 +66,10 @@ def pad_crop(img_data: np.ndarray,
     new_data : np.ndarray
         4D array with shape (target_x, target_y, target_z, T).
     """
+    marker_3d = False
+    if img_data.ndim == 3:
+        img_data = img_data[..., np.newaxis]
+        marker_3d = True
 
     # Parse the shape and extract T
     if img_data.ndim != 4:
@@ -96,7 +100,7 @@ def pad_crop(img_data: np.ndarray,
     if any(pw != (0, 0) for pw in pad_width):
         new_data = np.pad(new_data, pad_width=pad_width, mode='constant', constant_values=fill_value)
 
-    return new_data
+    return new_data[..., 0] if marker_3d else new_data
 
 
 def mask_fmri(fmri: np.ndarray, mask_path: str) -> np.ndarray:
