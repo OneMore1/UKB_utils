@@ -8,6 +8,8 @@ if ! command -v python3 &>/dev/null; then
   exit 1
 fi
 
+pip3 install nilearn
+
 # check zstd + base64 installed
 if ! command -v zstd &>/dev/null; then
   echo "zstd could not be found."
@@ -195,7 +197,8 @@ process_rfMRI() {
 
     python3 augment_rois.py \
       --fmri "${SUBJECT_DIR}/fMRI/rfMRI.nii.gz" \
-      --atlas "${SUBJECT_DIR}/atlas_data/${atlas}.nii" \
+      --adjacency_dir "./atlas_data/adjacency" \
+      --atlas_dir "${SUBJECT_DIR}/atlas_data" \
       --output_dir "${SUBJECT_DIR}/voxel2atlas/${sub_file_idx}" \
 
     if [[ " ${atlas_list_vox2fc[*]} " == *" ${atlas} "* ]]; then
