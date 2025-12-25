@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+INPUT_1=$1
+INPUT_2=$2
+
+START_LINE=$(($1 + 1))
+END_LINE=$(($2 + 1))
+BASE_PATH="."
+
 # check python3 installed
 if ! command -v python3 &>/dev/null; then
   echo "Python3 could not be found."
@@ -45,8 +52,8 @@ STAGE_FMRI="${STAGE_ROOT}/fMRI_rb"              # 每个被试一个子目录
 STAGE_ATLAS="${STAGE_ROOT}/voxel_atlas_rb"      # 每个被试一个子目录
 
 # 远端 tar 上传目录（每类一个；tar+txt 上传到同一目录；可改）
-REMOTE_FMRI_TAR_DIR="/datasets/fMRI_rb_tar"
-REMOTE_ATLAS_TAR_DIR="/datasets/voxel_atlas_rb_tar"
+REMOTE_FMRI_TAR_DIR="/datasets/fMRI_rb_tar2"
+REMOTE_ATLAS_TAR_DIR="/datasets/voxel_atlas_rb_tar2"
 
 BATCH_NUM=1
 BATCH_COUNT=0
@@ -116,12 +123,11 @@ flush_batch() {
   printf -v batch_tag "%04d" "${batch_num}"
   ts="$(date +'%Y%m%d_%H%M%S')"
 
-  local tar_fmri="${STAGE_ROOT}/fMRI_rb_batch_${batch_tag}_${ts}.tar"
-  local list_fmri="${STAGE_ROOT}/fMRI_rb_batch_${batch_tag}_${ts}.txt"
+  local tar_fmri="${STAGE_ROOT}/fMRI_rb_batch_s${INPUT_1}-e${INPUT_2}_${batch_tag}_${ts}.tar"
+  local list_fmri="${STAGE_ROOT}/fMRI_rb_batch_s${INPUT_1}-e${INPUT_2}_${batch_tag}_${ts}.txt"
 
-  local tar_atlas="${STAGE_ROOT}/voxel_atlas_rb_batch_${batch_tag}_${ts}.tar"
-  local list_atlas="${STAGE_ROOT}/voxel_atlas_rb_batch_${batch_tag}_${ts}.txt"
-
+  local tar_atlas="${STAGE_ROOT}/voxel_atlas_rb_batch_s${INPUT_1}-e${INPUT_2}_${batch_tag}_${ts}.tar"
+  local list_atlas="${STAGE_ROOT}/voxel_atlas_rb_batch_s${INPUT_1}-e${INPUT_2}_${batch_tag}_${ts}.txt"
   # 收集被试目录名（只取一级子目录名）
   mapfile -t fmri_dirs < <(find "${STAGE_FMRI}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
   mapfile -t atlas_dirs < <(find "${STAGE_ATLAS}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
@@ -169,16 +175,6 @@ final_flush() {
     BATCH_COUNT=0
   fi
 }
-
-# download nifti_process.py
-wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/nifti_process.py
-wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/volume2fc.py
-wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/roi_augmentation/augment_rois.py
-
-# extract subject id txt
-TXT_FILE=final_list_wo_disease_mapped.csv
-dx download --no-progress /mri_process_utils/${TXT_FILE}
-dx download --no-progress --recursive /mri_process_utils/roi_augmentation/atlas_data
 
 atlas_list=(
   AA424_2mm
@@ -302,9 +298,15 @@ process_rfMRI() {
   echo "[${sub_file_idx}] rfMRI processing complete."
 }
 
-START_LINE=$(($1 + 1))
-END_LINE=$(($2 + 1))
-BASE_PATH="."
+# download nifti_process.py
+wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/nifti_process.py
+wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/volume2fc.py
+wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/roi_augmentation/augment_rois.py
+
+# extract subject id txt
+TXT_FILE=final_list_wo_disease_mapped.csv
+dx download --no-progress /mri_process_utils/${TXT_FILE}
+dx download --no-progress --recursive /mri_process_utils/roi_augmentation/atlas_data
 
 init_stage_dirs
 
