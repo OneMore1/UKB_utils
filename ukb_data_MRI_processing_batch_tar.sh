@@ -192,7 +192,7 @@ process_subject() {
 
 wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/mri_t1_mni2npyzst.py
 
-TXT_FILE="fMRI_20227_id.txt"
+TXT_FILE="${3:-fMRI_20227_id.txt}"
 # 下载被试列表
 dx download --no-progress /mri_process_utils/${TXT_FILE}
 
