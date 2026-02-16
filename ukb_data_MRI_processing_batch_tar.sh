@@ -33,7 +33,7 @@ pip3 install --quiet nibabel numpy
 # --------------------------
 # Batching / staging settings
 # --------------------------
-BATCH_SIZE=100
+BATCH_SIZE=1000
 
 # 本地暂存目录
 STAGE_ROOT="./_stage_batches"
