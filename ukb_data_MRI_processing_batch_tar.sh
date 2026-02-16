@@ -191,7 +191,7 @@ process_subject() {
 
 wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/mri_t1_mni2npyzst.py
 
-TXT_FILE="fMRI_20250_id.txt"
+TXT_FILE="fMRI_20227_id.txt"
 # 下载被试列表
 dx download --no-progress /mri_process_utils/${TXT_FILE}
 
@@ -210,7 +210,7 @@ while IFS= read -r sub_file_idx; do
   fi
   # 注意下面的数据流处理部分
 done < <(
-  sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE"
+  sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" | sed "s|_20227_|_20252_|g"
 )
 
 final_flush
