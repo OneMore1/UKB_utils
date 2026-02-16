@@ -210,9 +210,7 @@ while IFS= read -r sub_file_idx; do
   fi
   # 注意下面的数据流处理部分
 done < <(
-  sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE" |
-    cut -d'_' -f1 |
-    sort -u
+  sed -n "${START_LINE},${END_LINE}p" "$TXT_FILE"
 )
 
 final_flush
