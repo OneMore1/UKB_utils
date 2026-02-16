@@ -4,6 +4,9 @@ set -euo pipefail
 INPUT_1=$1
 INPUT_2=$2
 
+TXT_FILE="${3:-final_list_wo_disease_mapped.csv}"
+TXT_NAME=$(basename "$TXT_FILE")
+
 START_LINE=$(($1 + 1))
 END_LINE=$(($2 + 1))
 BASE_PATH="."
@@ -52,8 +55,8 @@ STAGE_FMRI="${STAGE_ROOT}/fMRI_rb"              # 每个被试一个子目录
 STAGE_ATLAS="${STAGE_ROOT}/voxel_atlas_rb"      # 每个被试一个子目录
 
 # 远端 tar 上传目录（每类一个；tar+txt 上传到同一目录；可改）
-REMOTE_FMRI_TAR_DIR="/datasets/fMRI_rb_tar2"
-REMOTE_ATLAS_TAR_DIR="/datasets/voxel_atlas_rb_tar2"
+REMOTE_FMRI_TAR_DIR="/datasets/fMRI_rb_tar2_${TXT_NAME}"
+REMOTE_ATLAS_TAR_DIR="/datasets/voxel_atlas_rb_tar2_${TXT_NAME}"
 
 BATCH_NUM=1
 BATCH_COUNT=0
@@ -304,7 +307,6 @@ wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/volume2fc.py
 wget -q https://raw.githubusercontent.com/OneMore1/UKB_utils/master/roi_augmentation/augment_rois.py
 
 # extract subject id txt
-TXT_FILE=final_list_wo_disease_mapped.csv
 dx download --no-progress /mri_process_utils/${TXT_FILE}
 dx download --no-progress --recursive /mri_process_utils/roi_augmentation/atlas_data
 
