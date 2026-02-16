@@ -169,7 +169,8 @@ process_subject() {
 
   python3 mri_t1_mni2npyzst.py \
     -i "${TARGET_NII}" \
-    -o "${OUT_DIR}/${sub_file_idx}_T1_brain_to_MNI.npy.zst"
+    -o "${OUT_DIR}/${sub_file_idx}_T1_brain_to_MNI.npy.zst" \
+    -q
 
   # 如果 Python 脚本执行失败则清理退出
   if [[ $? -ne 0 ]]; then

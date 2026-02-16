@@ -23,10 +23,11 @@ def save(file, arr, allow_pickle=False) -> None:
         _f.write(_cctx.compress(buf.getvalue()))
 
 
-def convert_nifti_to_npy(input_path, output_path):
+def convert_nifti_to_npy(input_path, output_path, quiet=False):
     try:
         # Load the NIfTI file
-        print(f"Loading: {input_path}")
+        if not quiet:
+            print(f'Loading: {input_path}')
         img = nib.load(input_path)
 
         # Get the data as a numpy array
@@ -37,7 +38,8 @@ def convert_nifti_to_npy(input_path, output_path):
         # do z-score normalization for > 0 values
         positive_mask = data > 0
         if np.any(positive_mask):
-            print(f"Performing z-score normalization on {np.sum(positive_mask)} positive voxels.")
+            if not quiet:
+                print(f'Performing z-score normalization on {np.sum(positive_mask)} positive voxels.')
             data_mean = np.mean(data[positive_mask])
             data_std = np.std(data[positive_mask])
             data_var = np.var(data[positive_mask])
@@ -50,26 +52,32 @@ def convert_nifti_to_npy(input_path, output_path):
 
         # Save as .npy
         save(output_path, data)
-        print(f"Successfully saved to: {output_path}")
-        print(f"Array shape: {data.shape}")
+        if not quiet:
+            print(f'Successfully saved to: {output_path}')
+            print(f'Array shape: {data.shape}')
 
         # save mean / std / var to csv file
-        stats_path = os.path.splitext(output_path)[0] + "_stats.csv"
+        stats_path = os.path.splitext(output_path)[0] + '_stats.csv'
         with open(stats_path, 'w') as f:
-            f.write(f"Mean,Std,Var\n")
-            f.write(f"{data_mean},{data_std},{data_var}\n")
+            f.write(f'eid,Mean,Std,Var\n')
+            f.write(f'{os.path.basename(output_path)},{data_mean},{data_std},{data_var}\n')
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f'Error: {e}')
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert .nii.gz MRI files to .npy format.")
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Convert .nii.gz MRI files to .npy format.')
 
     # Define arguments
-    parser.add_argument("-i", "--input", required=True, help="Path to the input .nii.gz file")
-    parser.add_argument("-o", "--output", required=True, help="Path to save the output .npy.zst file")
+    parser.add_argument('-i', '--input', required=True, help='Path to the input .nii.gz file')
+    parser.add_argument('-o', '--output', required=True, help='Path to save the output .npy.zst file')
+    parser.add_argument('--quiet', '-q', action='store_true', help='Suppress non-error output')
 
     args = parser.parse_args()
 
-    convert_nifti_to_npy(args.input, args.output)
+    if not args.quiet:
+        print(f'Processing input: {args.input}')
+        print(f'Output path: {args.output}')
+
+    convert_nifti_to_npy(args.input, args.output, quiet=args.quiet)
