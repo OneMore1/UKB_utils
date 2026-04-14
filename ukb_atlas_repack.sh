@@ -2,26 +2,25 @@
 
 set -euo pipefail
 
-TARGET="datasets/atlas"
-OUTPUT="atlas"
+DATASETS="datasets"
+TARGET="$1"
 
 echo "Downloading atlas data from DNAnexus..."
 dx download \
   --no-progress \
   --recursive \
   --overwrite \
-  "${DX_PROJECT_CONTEXT_ID}:/${TARGET}/" \
-  --output "${OUTPUT}/"
+  "${DX_PROJECT_CONTEXT_ID}:/${DATASETS}/${TARGET}"
 
 echo "Repacking atlas data..."
-tar --zstd -cf "${OUTPUT}.tar.zst" "${OUTPUT}/"
+tar --zstd -cf "${TARGET}.tar.zst" "${TARGET}"
 
 echo "Uploading repacked atlas data to DNAnexus..."
 dx upload \
   --wait \
   --no-progress \
-  --path "${DX_PROJECT_CONTEXT_ID}:/datasets/${OUTPUT}.tar.zst" \
-  "${OUTPUT}.tar.zst"
+  --path "${DX_PROJECT_CONTEXT_ID}:/${DATASETS}/${TARGET}.tar.zst" \
+  "${TARGET}.tar.zst"
 
 echo "Cleaning up local files..."
-rm -rf "${OUTPUT}/" "${OUTPUT}.tar.zst"
+rm -rf "${TARGET}" "${TARGET}.tar.zst"
